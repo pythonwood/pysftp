@@ -109,7 +109,7 @@ class Connection(object):   # pylint:disable=r0902,r0904
 
     def __init__(self, host, username=None, private_key=None, password=None,
                  port=22, private_key_pass=None, ciphers=None, log=False,
-                 cnopts=None, default_path=None):
+                 cnopts=None, default_path=None, sock=None):
         # starting point for transport.connect options
         self._tconnect = {'username': username, 'password': password,
                           'hostkey': None, 'pkey': None}
@@ -137,7 +137,7 @@ class Connection(object):   # pylint:disable=r0902,r0904
         self._set_logging()
         # Begin the SSH transport.
         self._transport = None
-        self._start_transport(host, port)
+        self._start_transport(host, port, sock)
         self._transport.use_compression(self._cnopts.compression)
         self._set_authentication(password, private_key, private_key_pass)
         self._transport.connect(**self._tconnect)
@@ -170,10 +170,12 @@ class Connection(object):   # pylint:disable=r0902,r0904
                     self._tconnect['pkey'] = DSSKey.from_private_key_file(
                         private_key_file, private_key_pass)
 
-    def _start_transport(self, host, port):
+    def _start_transport(self, host, port, sock):
         '''start the transport and set the ciphers if specified.'''
         try:
-            self._transport = paramiko.Transport((host, port))
+            if sock:
+                sock.connect((host, port))
+            self._transport = paramiko.Transport(sock or (host, port))
             # Set security ciphers if set
             if self._cnopts.ciphers is not None:
                 ciphers = self._cnopts.ciphers
